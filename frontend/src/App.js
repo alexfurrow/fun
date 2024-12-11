@@ -11,7 +11,7 @@ function App() {
     e.preventDefault();
     try {
       // Replace with your backend API URL
-      const res = await fetch("http://localhost:5000/api", {
+      const res = await fetch("http://localhost:5000/api/generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -19,7 +19,11 @@ function App() {
         body: JSON.stringify({ message: input }),
       });
       const data = await res.json();
-      setResponse(data.reply); // Assume your backend sends a `reply` field
+      if (data.reply) {
+        setResponse(data.reply); // Update resopnse with the reply from OpenAi
+      } else if (data.error) {
+        setResponse('Error: ${data.error}');
+      }
     } catch (error) {
       console.error("Error:", error);
       setResponse("An error occurred while communicating with the server.");
