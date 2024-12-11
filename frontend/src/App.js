@@ -5,10 +5,12 @@ function App() {
   // State to hold user input and response
   const [input, setInput] = useState("");
   const [response, setResponse] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Function to handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true); // Show loading state while waiting for API response
     try {
       // Replace with your backend API URL
       const res = await fetch("http://localhost:5000/api/generate", {
@@ -28,26 +30,51 @@ function App() {
       console.error("Error:", error);
       setResponse("An error occurred while communicating with the server.");
     }
+    setIsLoading(false); //End loading state
   };
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>
       <h1>React Frontend</h1>
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} style={{ marginBottom: "20px" }}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type something..."
-          style={{ padding: "10px", width: "200px" }}
+          placeholder="Enter your prompt"
+          style={{
+            padding: "10px",
+            width: "300px",
+            fontSize: "16px",
+          }}
         />
-        <button type="submit" style={{ padding: "10px 20px", marginLeft: "10px" }}>
+        <button
+          type="submit"
+          style={{
+            padding: "10px 20px",
+            marginLeft: "10px",
+            fontSize: "16px",
+            cursor: "pointer",
+          }}
+        >
           Submit
         </button>
       </form>
-      {response && (
-        <div style={{ marginTop: "20px", fontSize: "18px", color: "blue" }}>
-          <strong>Response:</strong> {response}
+
+      {isLoading ? (
+        <p>Loading...</p>
+      ) : (
+        <div
+          style={{
+            border: "1px solid #ddd",
+            padding: "15px",
+            width: "60%",
+            margin: "0 auto",
+            textAlign: "left",
+          }}
+        >
+          <h3>API Response:</h3>
+          <p>{response || "No response yet!"}</p>
         </div>
       )}
     </div>
