@@ -8,6 +8,10 @@ load_dotenv()
 
 app = Flask(__name__)
 
+@app.route('/')
+def home():
+    return "Welcome to the Flask Backend!"
+
 # Set your OpenAI API key from the .env file
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
