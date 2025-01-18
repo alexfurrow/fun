@@ -1,0 +1,5 @@
+1. to start backend, create a bash terminal, navigate to backend then run app.py
+2. then to get the front end, create a bash, navigate to front end, run npm start
+3. instantiate stuff, so like the prompts, user, etc.
+    prompt instance, or static instance?
+    user instance?

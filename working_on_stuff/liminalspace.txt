@@ -1,0 +1,2 @@
+1. privacy/encryption
+2. defense against the dark arts - people exploiting the prompts, people sharing really rough details
