@@ -1,4 +1,4 @@
-
+- persistant storage
 - need to figure out orientation how it feeds into the prompt class and associated functions
 - need to figure out the system and user thing, like where to put the prompt stuff in classes, like "the following criteria" - does it go in system? or does it live in user?
 
