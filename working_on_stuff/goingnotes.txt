@@ -92,3 +92,35 @@ AI response:
 
     Educational Market
         Students reflecting on progress, teachers analyzing anonymized student writing patterns, etc.
+
+
+
+   1.24.2025
+   So I have the basic skeleton of a auth service. I probably need to add in something for forgetting a password.
+   
+   Additional Security Considerations:
+      Implement rate limiting for login attempts
+      Add CORS protection
+      Set secure cookie flags
+      Implement password reset functionality
+      Add email verification
+      Use HTTPS in production
+      Implement refresh tokens
+      Would you like me to elaborate on any of these aspects or show how to implement any additional security features?
+
+   RE: routes.py
+      These additions provide:
+         Password reset functionality
+         User profile management
+         Session management (logout)
+         Token refresh mechanism
+         Email verification
+         Protected routes using JWT
+      Remember to:
+         Add appropriate error handling
+         Implement rate limiting for sensitive routes
+         Add validation for user inputs
+         Set up email service for password reset and verification in production
+         Add logging for security events
+         Consider adding 2FA routes if needed
+         Would you like me to elaborate on any of these features or show how to implement additional security measures?
