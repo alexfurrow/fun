@@ -9,6 +9,10 @@ def test_create_user():
     
     with app.app_context():
         try:
+            # Create all tables
+            print("Creating database tables...")
+            db.create_all()
+            
             # Create a test user
             test_user = User(
                 username="test_user",
@@ -22,6 +26,10 @@ def test_create_user():
             db.session.delete(test_user)
             db.session.commit()
             print("✅ Test user cleaned up!")
+            
+            # Drop all tables
+            db.drop_all()
+            print("✅ Database tables cleaned up!")
             return True
         except Exception as e:
             print(f"❌ Test failed: {str(e)}")

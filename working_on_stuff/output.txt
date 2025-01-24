@@ -1,3 +1,4 @@
+this is the output of the prompt
 { "document": 
  {
      "restated_query": ["Today, I had a really good day. I got up around 9:30 AM and spent some time jamming, playing three games of Dota, where I did pretty well, although my team lost two of the games. It was super chill, and I enjoyed two or three cups of coffee, even though I was out of milk, so I soaked some almonds in it instead. I got a really good deal on almonds, purchasing five bags weighing either 0.5 or 1 lb each for about $0.31 per ounce, significantly lower than the usual $0.45 to $0.50 per ounce. After that, I set some goals for myself and managed to hit most of them, including making progress on my side project.", 
