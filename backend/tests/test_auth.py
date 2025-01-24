@@ -1,5 +1,6 @@
 from flask import Flask
 from auth.models import User, db
+from config.database import get_database_url
 
 def test_create_user():
     app = Flask(__name__)
@@ -24,4 +25,13 @@ def test_create_user():
             return True
         except Exception as e:
             print(f"❌ Test failed: {str(e)}")
-            return False 
+            return False
+
+if __name__ == "__main__":
+    # Run the test when file is executed
+    print("Running user creation test...")
+    result = test_create_user()
+    if result:
+        print("✅ All tests passed!")
+    else:
+        print("❌ Test failed!") 

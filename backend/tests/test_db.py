@@ -1,5 +1,5 @@
 from flask import Flask
-from config.database import db, validate_config
+from config.database import db, validate_config, get_database_url
 
 def test_db_connection():
     try:

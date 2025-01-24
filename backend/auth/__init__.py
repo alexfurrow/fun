@@ -4,6 +4,10 @@
 # Sets up user loading for Flask-Login
 # Registers the auth blueprint
 # 5. Adds JWT error handlers
+import os
+from flask_jwt_extended import JWTManager
+from flask_bcrypt import Bcrypt
+from flask_login import LoginManager
 
 # Initialize extensions
 jwt = JWTManager()
