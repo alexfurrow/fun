@@ -31,10 +31,6 @@ def init_auth(app):
     # Set login view
     login_manager.login_view = 'auth.login'
     
-    # Import and register blueprint
-    from .routes import auth_bp
-    app.register_blueprint(auth_bp, url_prefix='/api/auth')
-    
     # Optional: JWT error handlers
     @jwt.expired_token_loader
     def expired_token_callback(jwt_header, jwt_payload):

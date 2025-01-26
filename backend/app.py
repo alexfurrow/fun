@@ -4,8 +4,13 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from auth import init_auth
-from auth.models import db
-from auth.routes import auth_bp
+from auth.models import db, User, UserProfile
+from auth.routes import auth_bp, limiter
+from flask_migrate import Migrate
+from flask_session import Session
+from datetime import timedelta
+from flask_mail import Mail
+from auth.email import mail
 
 from classes import Prompt
 #from user import UserProfile
@@ -16,10 +21,17 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
+# Add session configuration
+app.config['SESSION_TYPE'] = 'filesystem'
+Session(app)
+
+# Initialize limiter with app
+limiter.init_app(app)
+
 # Database Configuration
-DB_NAME = "stack_db"
-DB_USER = os.getenv("DB_USER", "your_username")  # Use environment variables
-DB_PASSWORD = os.getenv("DB_PASSWORD", "your_password")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 
@@ -29,24 +41,35 @@ app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{DB_USER}:{DB_PASSWORD}@{
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')  # Change this!
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'another-secret-key')   # For Flask-Login
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=15)
+app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
+# Add email configuration
+app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
+app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER')
+app.config['FRONTEND_URL'] = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 # Initialize extensions
 db.init_app(app)
+migrate = Migrate(app, db)
+init_auth(app)
 
-# Create database tables
-def init_db():
-    with app.app_context():
-        # Create all tables
-        db.create_all()
-        print("Database tables created successfully!")
+# Register blueprint
+app.register_blueprint(auth_bp)
+
+# Initialize mail
+mail.init_app(app)
 
 if __name__ == '__main__':
-    init_db()  # Initialize database tables
+    with app.app_context():
+        print("Creating database tables...")
+        db.create_all()
+        print("Tables created successfully!")
     app.run(debug=True)
-
-# Register blueprints
-app.register_blueprint(auth_bp, url_prefix='/api/auth')
 
 @app.route('/')
 def home():

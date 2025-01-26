@@ -3,3 +3,5 @@
 3. integrate psychology into the prompts
 4. story. 1. but/therefore 2. 3 or 5 acts. 
 5. poem - short 6 word thing (very masculine). flowery version (very feminine)
+6. idea - this would eventually just be an api. create api for this app. that way someone can call into it without actually opening an app.
+7. also, email verificaiton is maybe not necessary? what does cursor do? i felt like it was really easy. 

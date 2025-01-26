@@ -1,3 +1,4 @@
+- check composer and bug finder
 - persistant storage
 - need to figure out orientation how it feeds into the prompt class and associated functions
 - need to figure out the system and user thing, like where to put the prompt stuff in classes, like "the following criteria" - does it go in system? or does it live in user?
@@ -124,3 +125,33 @@ AI response:
          Add logging for security events
          Consider adding 2FA routes if needed
          Would you like me to elaborate on any of these features or show how to implement additional security measures?
+
+
+
+1.25.2025
+Added
+1. Changed Database Structure:
+   PostgreSQL database with two tables:
+      users table (user_id, username, email, password_hash)
+      user_profiles table (profile_id, user_id, first_name, last_name, age, gender, race, city)
+   Established proper relationships between tables
+2. Added API Endpoints:
+   # Create a new user
+   POST /api/auth/users
+   
+   # Get all users
+   GET /api/auth/users
+   
+   # Login
+   POST /api/auth/login
+   
+   # Logout
+   POST /api/auth/logout
+3. Added Security Features:
+   Password hashing
+   Login/logout functionality
+   Session management
+4. Testing:
+   Created test users via PowerShell commands
+   Verified data persistence in PostgreSQL
+   Tested API endpoints
