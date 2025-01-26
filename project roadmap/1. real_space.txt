@@ -1,4 +1,8 @@
-- email verification
+- upload file (text or voice)
+- text entry
+- voice entry
+- create front end landing page for the verification confirmation email ("your email is confirmed! you can exit this page") and reset password front end page.
+- create an email for the app to send the emails from (like verification emails) - services like SendGrid, Amazon SES, Mailgun would be production services.
 - check composer and bug finder
 - need to figure out orientation how it feeds into the prompt class and associated functions
 - need to figure out the system and user thing, like where to put the prompt stuff in classes, like "the following criteria" - does it go in system? or does it live in user?
@@ -155,3 +159,17 @@ Added
    Created test users via PowerShell commands
    Verified data persistence in PostgreSQL
    Tested API endpoints
+
+1.26.2025
+So first to recap yesterday. There's decorators which are mostly used for logins and some other stuff that I don't remember. Decorators wrap around the function...
+and help do things like timeouts.
+Logins, logouts, sessions, registration, password resets are all thinsg that require api calls from the front end to the backend, whether its the db or simply the app itself.
+There are some boilerplate security features such as rate limiting the number at attmpts you can have per hour, as well as how fast you can try to login. 
+Moreover, more fancy things are like jwt tokens, which are used to track across diferent instances of the app on other devices. Additionally, they help with scale because they prevent the problem of querying a database for every request, and sessions take up database space. 
+with the jwt token, it stores it in the client, so it doesn't query the database. it is stateless, meaning it doesn't store sessions, and it works across multiple servers and multiple devices.
+
+it's primarily for authentication, authorization, and identity. so confirming the user is who they say they are, includes information on waht they can do, and that identity is valid. it's a lot like a drivers license that's issued for each user every time they open the app, and the app is a bouncer that cheekcs the id, makes sure that its not fake, looks at the picture to ensure that it is the person who says they are, and then sees what theyre allowed to do like if they are over 21 then they are allowed to drink alcohol.
+additionally jwt tokens are split into two types, one is an access token which lasts for like 15-60 minutes, basically based on how long the user is on the app (probalby), and it gets refreshed by the refresh token. btw the tokens are created both in the first session of the user. and then if you click "remember me" then the refresh token is created. it allows the user to not have to login again. but it expires every X days (30, 60, etc) and after that point the user has to login again.
+
+anyway, development. I got the verification email to work, however, i will need to create an email address for the app to send the emails from.
+

@@ -3,17 +3,16 @@ from flask_cors import CORS
 from openai import OpenAI
 import os
 from dotenv import load_dotenv
-from auth import init_auth
-from auth.models import db, User, UserProfile
-from auth.routes import auth_bp, limiter
+from .auth import init_auth
+from .models.models import db, User, UserProfile
+from .routes.routes import auth_bp, limiter
 from flask_migrate import Migrate
 from flask_session import Session
 from datetime import timedelta
 from flask_mail import Mail
-from auth.email import mail
-
-from classes import Prompt
-#from user import UserProfile
+from .auth.email import mail
+from .services.services import Prompt
+from .utils.utils import InitialText
 
 # Load environment variables
 load_dotenv()

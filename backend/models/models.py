@@ -14,9 +14,9 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     failed_login_attempts = db.Column(db.Integer, default=0)
     locked_until = db.Column(db.DateTime, nullable=True)
-    profile = db.relationship('UserProfile', backref='user', uselist=False)
     email_verified = db.Column(db.Boolean, default=False)
     active = db.Column(db.Boolean, default=True)
+    profile = db.relationship('UserProfile', backref='user', uselist=False)
 
     def get_id(self):
         """Override get_id from UserMixin"""

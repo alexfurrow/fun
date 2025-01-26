@@ -1,5 +1,5 @@
 from flask import Flask
-from auth.models import User, UserProfile, db
+from backend.models.models import User, UserProfile, db
 from config.database import get_database_url
 import random
 import string

@@ -8,6 +8,8 @@ import os
 from flask_jwt_extended import JWTManager
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
+from ..models.models import User
+
 
 # Initialize extensions
 jwt = JWTManager()
@@ -22,7 +24,7 @@ def init_auth(app):
     login_manager.init_app(app)
     
     # Import models here to avoid circular imports
-    from .models import User
+    from ..models.models import User
     
     @login_manager.user_loader
     def load_user(user_id):

@@ -7,10 +7,10 @@ from flask_jwt_extended import (
 )
 from flask_bcrypt import Bcrypt
 from flask_login import login_user, logout_user, login_required, current_user
-from .models import db, User, UserProfile
+from ..models.models import db, User, UserProfile
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from .email import send_password_reset_email, send_verification_email, verify_token
+from ..auth.email import send_password_reset_email, send_verification_email, verify_token
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 bcrypt = Bcrypt()
@@ -135,10 +135,27 @@ def reset_password():
         return jsonify({'error': str(e)}), 400
 
 @auth_bp.route('/verify-email', methods=['POST'])
-def verify_email():
+def process_email_verification():
     try:
         data = request.get_json()
         email = verify_token(data['token'], 'verify')
+        if not email:
+            return jsonify({'error': 'Invalid or expired token'}), 400
+            
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        user.email_verified = True
+        db.session.commit()
+        return jsonify({'message': 'Email verified successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
+
+@auth_bp.route('/verify-email/<token>', methods=['GET'])
+def verify_email(token):
+    try:
+        email = verify_token(token, 'verify')
         if not email:
             return jsonify({'error': 'Invalid or expired token'}), 400
             

@@ -1,5 +1,5 @@
 from flask import Flask
-from auth.models import User, db
+from backend.models.models import User, db
 from config.database import get_database_url
 
 def test_create_user():
