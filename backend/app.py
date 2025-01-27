@@ -4,8 +4,8 @@ from openai import OpenAI
 import os
 from dotenv import load_dotenv
 from .auth import init_auth
-from .models.models import db, User, UserProfile
-from .routes.routes import auth_bp, limiter
+from .models.models import db, User, UserProfile, YapEntry
+from .routes.auth_routes import auth_bp, limiter
 from flask_migrate import Migrate
 from flask_session import Session
 from datetime import timedelta
@@ -13,19 +13,54 @@ from flask_mail import Mail
 from .auth.email import mail
 from .services.services import Prompt
 from .utils.utils import InitialText
+from flask_limiter.util import get_remote_address
+from flask_limiter import Limiter
+import redis
+from flask_jwt_extended import jwt_required, get_jwt_identity, JWTManager
+from .routes.yap_routes import yap_bp
+from .extensions import bcrypt, jwt, init_extensions
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure JWT
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = 3600  # 1 hour
+
+# Initialize extensions
+init_extensions(app)
+
+# Configure CORS more explicitly
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Access-Control-Allow-Credentials"],
+        "supports_credentials": True,
+        "expose_headers": ["Content-Range", "X-Content-Range"]
+    }
+})
 
 # Add session configuration
 app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
-# Initialize limiter with app
-limiter.init_app(app)
+# Configure Redis for rate limiting
+redis_client = redis.Redis(
+    host=os.getenv('REDIS_HOST', 'localhost'),
+    port=int(os.getenv('REDIS_PORT', 6379)),
+    db=0,
+    decode_responses=True
+)
+
+# Initialize limiter with Redis storage
+limiter = Limiter(
+    key_func=get_remote_address,
+    storage_uri="redis://localhost:6379",
+    storage_options={"connection_pool": redis.ConnectionPool.from_url("redis://localhost:6379")}
+)
 
 # Database Configuration
 DB_NAME = os.getenv("DB_NAME")
@@ -38,9 +73,7 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 # Configure app
 app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'your-secret-key')  # Change this!
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'another-secret-key')   # For Flask-Login
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(minutes=15)
 app.config['JWT_REFRESH_TOKEN_EXPIRES'] = timedelta(days=30)
 
 # Add email configuration
@@ -57,11 +90,26 @@ db.init_app(app)
 migrate = Migrate(app, db)
 init_auth(app)
 
-# Register blueprint
-app.register_blueprint(auth_bp)
+# Import and register blueprints
+from .routes.auth_routes import create_auth_routes
+from .routes.yap_routes import yap_bp
+
+# Create and register blueprints
+auth_bp = create_auth_routes(bcrypt)
+app.register_blueprint(auth_bp, url_prefix='/api')
+app.register_blueprint(yap_bp, url_prefix='/api')
 
 # Initialize mail
 mail.init_app(app)
+
+# Add OPTIONS handler for the specific endpoint
+@app.route('/api/yap', methods=['OPTIONS'])
+def handle_options():
+    response = jsonify({'message': 'OK'})
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    return response
 
 if __name__ == '__main__':
     with app.app_context():
@@ -131,7 +179,61 @@ def generate_page():
 #     reply = response.choices[0].message.content
 #     return jsonify({"reply":reply})
 
-
+@app.route('/api/yap', methods=['POST'])
+@jwt_required()  # Ensure user is authenticated
+def process_yap():
+    try:
+        data = request.get_json()
+        raw_text = data.get('content')
+        current_user_id = get_jwt_identity()
+        
+        # Create new YapEntry with raw text
+        new_yap = YapEntry(
+            user_id=current_user_id,
+            content=raw_text,
+            source_type='manual'
+        )
+        
+        # Process text through Prompt service
+        prompt_instance = Prompt(
+            orientation="refinement",
+            style="poetic",
+            author_to_emulate="Maya Angelou",
+            user_profile={"age":37, "gender":"male","race":"white","city":"Houston"}
+        )
+        
+        # Get refined text from OpenAI
+        client = OpenAI()
+        system_prompt = prompt_instance.system_prompt(orientation='refinement')
+        formatted_prompt = prompt_instance.generate_prompt(orientation='refinement', user_input=raw_text)
+        
+        response = client.chat.completions.create(
+            model="gpt-4-turbo-preview",
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": formatted_prompt}
+            ],
+            max_tokens=4000,
+            temperature=1
+        )
+        
+        refined_text = response.choices[0].message.content
+        new_yap.refined_text = refined_text
+        
+        # Save to database
+        db.session.add(new_yap)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Yap processed successfully",
+            "entry_id": new_yap.entry_id,
+            "refined_text": refined_text
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

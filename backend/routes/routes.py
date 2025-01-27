@@ -11,9 +11,9 @@ from ..models.models import db, User, UserProfile
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from ..auth.email import send_password_reset_email, send_verification_email, verify_token
+from ..extensions import bcrypt  # Import bcrypt from extensions
 
-auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
-bcrypt = Bcrypt()
+auth_bp = Blueprint('auth', __name__)
 
 # Initialize limiter
 limiter = Limiter(
@@ -39,46 +39,40 @@ def register():
     
     return jsonify({'message': 'User created successfully'}), 201
 
-@auth_bp.route('/login', methods=['POST'])
-@limiter.limit("5 per minute")
+@auth_bp.route('/auth/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
-        user = User.query.filter_by(username=data['username']).first()
+        email = data.get('email')
+        password = data.get('password')
+        
+        print(f"Login attempt - Email: {email}")
+        
+        if not email or not password:
+            return jsonify({'error': 'Email and password are required'}), 400
+
+        user = User.query.filter_by(email=email).first()
+        print(f"User found: {user is not None}")
         
         if not user:
-            return jsonify({'error': 'Invalid username or password'}), 401
-            
-        # Check if account is locked
-        is_locked, seconds_remaining = user.is_locked()
-        if is_locked:
-            return jsonify({
-                'error': f'Account is locked. Try again in {seconds_remaining} seconds'
-            }), 401
-            
-        if user.check_password(data['password']):
-            login_user(user)
-            session['user_id'] = user.user_id
-            user.reset_failed_attempts()
-            
-            # Create the JWT token
-            access_token = create_access_token(identity=user.user_id)
-            
-            return jsonify({
-                'message': 'Logged in successfully',
-                'access_token': access_token,  # Include the token in response
-                'user': {
-                    'user_id': user.user_id,
-                    'username': user.username,
-                    'email': user.email
-                }
-            }), 200
-            
-        # Failed login attempt
-        user.increment_failed_attempts()
-        return jsonify({'error': 'Invalid username or password'}), 401
+            return jsonify({'error': 'No account found with this email'}), 401
+        
+        password_check = bcrypt.check_password_hash(user.password_hash, password)
+        print(f"Password check result: {password_check}")
+        
+        if not password_check:
+            return jsonify({'error': 'Incorrect password'}), 401
+
+        access_token = create_access_token(identity=user.user_id)
+        print("Access token created successfully")
+        
+        return jsonify({
+            'access_token': access_token,
+            'user_id': user.user_id
+        }), 200
         
     except Exception as e:
+        print(f"Login error: {str(e)}")
         return jsonify({'error': str(e)}), 400
 
 @auth_bp.route('/logout', methods=['POST'])
@@ -171,30 +165,64 @@ def verify_email(token):
 
 # User profile routes
 @auth_bp.route('/profile', methods=['GET'])
-@jwt_required()  # Requires valid JWT token
+@jwt_required()
 def get_profile():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    return jsonify({
-        'username': user.username,
-        'email': user.email,
-        # Add other profile fields as needed
-    }), 200
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        profile = user.profile
+        
+        return jsonify({
+            'username': user.username,
+            'email': user.email,
+            'profile': {
+                'first_name': profile.first_name if profile else None,
+                'last_name': profile.last_name if profile else None,
+                'age': profile.age if profile else None,
+                'gender': profile.gender if profile else None,
+                'race': profile.race if profile else None,
+                'city': profile.city if profile else None
+            }
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 @auth_bp.route('/profile', methods=['PUT'])
 @jwt_required()
 def update_profile():
-    current_user_id = get_jwt_identity()
-    user = User.query.get(current_user_id)
-    data = request.get_json()
-    
-    # Update allowed fields
-    if 'username' in data:
-        user.username = data['username']
-    # Add other updatable fields
-    
-    db.session.commit()
-    return jsonify({'message': 'Profile updated successfully'}), 200
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get(current_user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+            
+        data = request.get_json()
+        
+        # Update or create profile
+        if not user.profile:
+            user.profile = UserProfile()
+            
+        profile = user.profile
+        profile.first_name = data.get('first_name', profile.first_name)
+        profile.last_name = data.get('last_name', profile.last_name)
+        profile.age = data.get('age', profile.age)
+        profile.gender = data.get('gender', profile.gender)
+        profile.race = data.get('race', profile.race)
+        profile.city = data.get('city', profile.city)
+        
+        db.session.commit()
+        
+        return jsonify({'message': 'Profile updated successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 400
 
 # Session management
 @auth_bp.route('/logout', methods=['POST'])
@@ -218,37 +246,20 @@ def create_user():
     try:
         data = request.get_json()
         
-        # Check if username or email already exists
-        if User.query.filter_by(username=data['username']).first():
-            return jsonify({'error': 'Username already exists'}), 400
+        # Check if user already exists
         if User.query.filter_by(email=data['email']).first():
-            return jsonify({'error': 'Email already exists'}), 400
-        
-        # Create user with password
+            return jsonify({'error': 'Email already registered'}), 400
+
+        # Create new user
         new_user = User(
             username=data['username'],
             email=data['email'],
-            email_verified=False  # Start as unverified
+            password_hash=bcrypt.generate_password_hash(data['password']).decode('utf-8'),
+            email_verified=False,
+            active=True
         )
-        new_user.set_password(data['password'])
         
         db.session.add(new_user)
-        db.session.commit()
-        
-        # Send verification email
-        send_verification_email(new_user)
-        
-        # Create profile
-        profile = UserProfile(
-            user_id=new_user.user_id,
-            first_name=data.get('first_name'),
-            last_name=data.get('last_name'),
-            age=data.get('age'),
-            gender=data.get('gender'),
-            race=data.get('race'),
-            city=data.get('city')
-        )
-        db.session.add(profile)
         db.session.commit()
         
         return jsonify({

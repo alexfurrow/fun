@@ -53,4 +53,46 @@ def upload_text():
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500 
+        return jsonify({'error': str(e)}), 500
+
+@text_bp.route('/text', methods=['POST'])
+@jwt_required()
+def save_text():
+    try:
+        data = request.get_json()
+        current_user_id = get_jwt_identity()
+        
+        new_text = TextEntry(
+            user_id=current_user_id,
+            content=data.get('content'),
+            entry_type=data.get('type', 'general')
+        )
+        
+        db.session.add(new_text)
+        db.session.commit()
+        
+        return jsonify({
+            "message": "Text saved successfully",
+            "entry_id": new_text.entry_id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@text_bp.route('/text', methods=['GET'])
+@jwt_required()
+def get_texts():
+    try:
+        current_user_id = get_jwt_identity()
+        texts = TextEntry.query.filter_by(user_id=current_user_id).all()
+        
+        return jsonify([{
+            "entry_id": text.entry_id,
+            "content": text.content,
+            "type": text.entry_type,
+            "created_at": text.created_at
+        } for text in texts]), 200
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500 

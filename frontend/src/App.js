@@ -1,37 +1,65 @@
 // src/App.js
 import React, { useState } from "react";
+import Login from './components/Login';
 
 function App() {
   // State to hold user input and response
   const [input, setInput] = useState("");
   const [response, setResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(!!localStorage.getItem('token'));
 
   // Function to handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true); // Show loading state while waiting for API response
     try {
-      // Replace with your backend API URL
-      const res = await fetch("http://localhost:5000/api/generate", {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Log the request for debugging
+      console.log('Sending request to:', "http://localhost:5000/api/yap");
+      console.log('Request body:', { content: input });
+      
+      const res = await fetch("http://localhost:5000/api/yap", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ message: input }),
+        body: JSON.stringify({ content: input }),
       });
+      
+      // Log the response for debugging
+      console.log('Response status:', res.status);
+      
+      if (!res.ok) {
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          setIsLoggedIn(false);
+          throw new Error('Session expired. Please login again.');
+        }
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
-      if (data.reply) {
-        setResponse(data.reply); // Update resopnse with the reply from OpenAi
+      if (data.refined_text) {
+        setResponse(data.refined_text);
       } else if (data.error) {
-        setResponse('Error: ${data.error}');
+        setResponse(`Error: ${data.error}`);
       }
     } catch (error) {
       console.error("Error:", error);
-      setResponse("An error occurred while communicating with the server.");
+      setResponse(`Error: ${error.message}`);
     }
     setIsLoading(false); //End loading state
   };
+
+  if (!isLoggedIn) {
+    return <Login onLoginSuccess={() => setIsLoggedIn(true)} />;
+  }
 
   return (
     <div style={{ textAlign: "center", marginTop: "50px" }}>

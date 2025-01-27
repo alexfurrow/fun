@@ -89,3 +89,20 @@ class UserProfile(db.Model):
             "race": self.race,
             "city": self.city
         }
+    
+class YapEntry(db.Model):
+    __tablename__ = 'yap_entries'
+    
+    entry_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
+    raw_text = db.Column(db.Text, nullable=False)  # Raw text content
+    refined_text = db.Column(db.Text)  # New column for AI-refined text
+    title = db.Column(db.String(255))
+    source_type = db.Column(db.String(50), nullable=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('yap_entries', lazy=True))
+    
+    def __repr__(self):
+        return f'<YapEntry {self.entry_id} by User {self.user_id}>' 

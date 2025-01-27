@@ -173,3 +173,5 @@ additionally jwt tokens are split into two types, one is an access token which l
 
 anyway, development. I got the verification email to work, however, i will need to create an email address for the app to send the emails from.
 
+- i refactored the folder and file structure and the imports so that it models best practices, basically. 
+- i've spent so long in the backend that it's time to go back and refactor the front end. i want the front end to access the back end, where it takes in the text entered by the user and then stores it in the db. then i want it to next, take that raw text and query it against the prompt in services. then i want it to store that in the same user db.
