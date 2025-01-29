@@ -175,3 +175,86 @@ anyway, development. I got the verification email to work, however, i will need 
 
 - i refactored the folder and file structure and the imports so that it models best practices, basically. 
 - i've spent so long in the backend that it's time to go back and refactor the front end. i want the front end to access the back end, where it takes in the text entered by the user and then stores it in the db. then i want it to next, take that raw text and query it against the prompt in services. then i want it to store that in the same user db.
+
+
+
+
+1.28.2025
+OKay so i spent this night refactoring the routes so they are split up. totally called for given how many i have and how complex it could get. ji also cleaned up the app.py file and moved some of the config to a config.py file.
+
+ai gave me this structurebackend/
+│
+├── app.py                 # Application factory and configuration
+├── config.py             # Configuration settings
+│
+├── routes/               # Route handlers (API endpoints)
+│   ├── __init__.py
+│   ├── auth_routes.py    # Authentication routes
+│   ├── yap_routes.py     # Yap-related routes
+│   ├── text_routes.py    # Text handling routes
+│   └── profile_routes.py # Profile management routes
+│
+├── services/             # Business logic
+│   ├── __init__.py
+│   ├── prompt.py        # AI text processing
+│   └── text_processor.py # Text manipulation
+│
+├── models/              # Database models
+│   ├── __init__.py
+│   └── models.py       # SQLAlchemy models
+│
+├── extensions/         # Flask extensions
+│   ├── __init__.py
+│   └── extensions.py  # JWT, CORS, etc.
+│
+└── utils/             # Helper functions
+    ├── __init__.py
+    └── helpers.py
+
+I def need to think about the differences between text routes, yap routes, and also text processor.py, they probably overlap or otherwise can be simplified. i think for starters, i'm going to delete the prompt and just have a text field be entered into the db.
+
+here's a graph of how it could work:
+graph TD
+    A[Frontend] -->|1. HTTP Request| B[Route Handler]
+    B -->|2. Validate Request| C[Auth/JWT]
+    B -->|3. Call Service| D[Service Layer]
+    D -->|4. Query Data| E[Database Models]
+    D -->|5. Process Data| F[Business Logic]
+    F -->|6. Return Result| B
+    B -->|7. HTTP Response| A
+
+#this is basically psuedocode and simplified version of the above idea above:
+    # 1. Frontend Request
+frontend = """
+fetch('/api/yap', {
+    method: 'POST',
+    body: JSON.stringify({ content: 'User text' })
+})
+"""
+
+# 2. Route Handler (routes/yap_routes.py)
+@yap_bp.route('/yap', methods=['POST'])
+@jwt_required()
+def process_yap():
+    data = request.get_json()
+    # Call service layer...
+    result = yap_service.process_text(data['content'])
+    return jsonify(result)
+
+# 3. Service Layer (services/yap_service.py)
+def process_text(content):
+    # Business logic
+    prompt = Prompt.create_prompt(content)
+    ai_response = openai_service.generate(prompt)
+    # Save to database
+    yap = YapEntry.create(content, ai_response)
+    return yap.to_dict()
+
+# 4. Database Model (models/models.py)
+class YapEntry(db.Model):
+    entry_id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text)
+    refined_text = db.Column(db.Text)
+
+
+........and so the next step is definitely to actually get a basic version of this to work. so i'm going to check all the components and see if i can understand them before moving on.

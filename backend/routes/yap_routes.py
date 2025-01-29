@@ -6,6 +6,34 @@ from openai import OpenAI
 
 yap_bp = Blueprint('yap', __name__, url_prefix='/api')
 
+@yap_bp.route('/generate', methods=['POST'])
+def generate_page():
+    client = OpenAI()
+    data = request.get_json()
+    user_input = data.get('message','')
+    
+    prompt_instance = Prompt(
+        style="poetic", 
+        author_to_emulate="Maya Angelou",
+        user_profile={"age":37, "gender":"male","race":"white","city":"Houston"},
+        orientation = "refinement"
+    )
+    system_prompt = prompt_instance.system_prompt(orientation = 'refinement')
+    formatted_prompt = prompt_instance.generate_prompt(orientation = 'refinement', user_input = user_input)
+
+    response = client.chat.completions.create(
+        model="gpt-4-turbo-preview",
+        response_format = { "type": "json_object"},
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": formatted_prompt}
+        ],
+        max_tokens=4000,
+        temperature=1
+    )
+    reply = response.choices[0].message.content
+    return jsonify({"reply":reply})
+
 @yap_bp.route('/yap', methods=['POST'])
 @jwt_required()
 def process_yap():

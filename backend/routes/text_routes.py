@@ -1,12 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
-from models.text_entry import TextEntry  # Update this import
-from models.models import User  # If needed
-from flask_sqlalchemy import SQLAlchemy
+from ..models.models import db, TextEntry, User  # Import db from models
 import os
-
-db = SQLAlchemy()
 
 text_bp = Blueprint('text', __name__, url_prefix='/api/text')
 
